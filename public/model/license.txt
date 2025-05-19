@@ -1,0 +1,11 @@
+Model Information:
+* title:	Range Rover Velar Tyre
+* source:	https://sketchfab.com/3d-models/range-rover-velar-tyre-903c6629d28f4aebaad141073081bab1
+* author:	mughulsameer (https://sketchfab.com/mughulsameer)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Range Rover Velar Tyre" (https://sketchfab.com/3d-models/range-rover-velar-tyre-903c6629d28f4aebaad141073081bab1) by mughulsameer (https://sketchfab.com/mughulsameer) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
