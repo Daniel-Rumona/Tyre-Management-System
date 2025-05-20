@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Layout,
   Menu,
@@ -22,55 +22,109 @@ import {
   UserOutlined,
   TeamOutlined
 } from '@ant-design/icons'
-import { useRouter } from 'next/navigation'
-import type { MenuProps } from 'antd'
-
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { MenuProps } from 'antd'
 
 const { Header, Sider, Content } = Layout
 
-const menuItems: MenuProps['items'] = [
-  {
-    key: '/admin',
-    icon: <DashboardOutlined />,
-    label: <Link href='/admin'>Dashboard</Link>
-  },
-  {
-    key: '/admin/tyres',
-    icon: <AppstoreOutlined />,
-    label: <Link href='/admin/tyres'>Tyres</Link>
-  },
-  {
-    key: '/admin/machines',
-    icon: <ToolOutlined />,
-    label: <Link href='/admin/machines'>Machines</Link>
-  },
-  {
-    key: '/admin/inspections',
-    icon: <FileSearchOutlined />,
-    label: <Link href='/admin/inspections'>Inspections</Link>
-  },
-  {
-    key: '/admin/reports',
-    icon: <SettingOutlined />,
-    label: <Link href='/admin/reports'>Reports</Link>
-  },
-  {
-    key: '/admin/users',
-    icon: <TeamOutlined />,
-    label: <Link href='/admin/users'>Users</Link>
-  }
-]
+const routeMap: Record<string, string> = {
+  '/': 'Home',
+  '/login': 'Login',
+  '/register': 'Register',
+  '/admin': 'Dashboard',
+  '/admin/tyres': 'Tyres',
+  '/admin/machines': 'Machines',
+  '/admin/inspections': 'Inspections',
+  '/admin/reports': 'Reports',
+  '/admin/users': 'Users'
+}
 
-const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+const allRoutesByRole: Record<string, MenuProps['items']> = {
+  Admin: [
+    {
+      key: '/admin',
+      icon: <DashboardOutlined />,
+      label: <Link href='/admin'>Dashboard</Link>
+    },
+    {
+      key: '/admin/tyres',
+      icon: <AppstoreOutlined />,
+      label: <Link href='/admin/tyres'>Tyres</Link>
+    },
+    {
+      key: '/admin/machines',
+      icon: <ToolOutlined />,
+      label: <Link href='/admin/machines'>Machines</Link>
+    },
+    {
+      key: '/admin/inspections',
+      icon: <FileSearchOutlined />,
+      label: <Link href='/admin/inspections'>Inspections</Link>
+    },
+    {
+      key: '/admin/reports',
+      icon: <SettingOutlined />,
+      label: <Link href='/admin/reports'>Reports</Link>
+    },
+    {
+      key: '/admin/users',
+      icon: <TeamOutlined />,
+      label: <Link href='/admin/users'>Users</Link>
+    }
+  ],
+  Fitter: [
+    {
+      key: '/admin/tyres',
+      icon: <AppstoreOutlined />,
+      label: <Link href='/admin/tyres'>Tyres</Link>
+    },
+    {
+      key: '/admin/inspections',
+      icon: <FileSearchOutlined />,
+      label: <Link href='/admin/inspections'>Inspections</Link>
+    }
+  ],
+  Supervisor: [
+    {
+      key: '/admin/inspections',
+      icon: <FileSearchOutlined />,
+      label: <Link href='/admin/inspections'>Inspections</Link>
+    },
+    {
+      key: '/admin/reports',
+      icon: <SettingOutlined />,
+      label: <Link href='/admin/reports'>Reports</Link>
+    }
+  ],
+  Director: [
+    {
+      key: '/admin/reports',
+      icon: <SettingOutlined />,
+      label: <Link href='/admin/reports'>Reports</Link>
+    }
+  ]
+}
+
+const SystemLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [role, setRole] = useState<string>('Admin') // Replace with real role from auth
+  const pathname = usePathname()
   const router = useRouter()
 
   const handleLogout = () => {
-    // TODO: Add Firebase logout
+    // TODO: Firebase logout
     router.push('/login')
   }
+
+  const breadcrumbs = pathname
+    .split('/')
+    .filter(Boolean)
+    .map((part, i, arr) => {
+      const href = '/' + arr.slice(0, i + 1).join('/')
+      return { title: routeMap[href] || part }
+    })
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -79,14 +133,14 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         <Menu
           theme='dark'
           mode='inline'
-          defaultSelectedKeys={['/admin']}
-          items={menuItems}
+          defaultSelectedKeys={[pathname]}
+          selectedKeys={[pathname]}
+          items={allRoutesByRole[role] || []}
         />
       </Sider>
       <Layout>
         <Header className='bg-white flex items-center justify-between px-4 shadow-sm'>
-          <Breadcrumb items={[{ title: 'Admin' }, { title: 'Dashboard' }]} />
-
+          <Breadcrumb items={breadcrumbs} />
           <Dropdown
             menu={{
               items: [
@@ -139,4 +193,4 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
-export default AdminLayout
+export default SystemLayout
