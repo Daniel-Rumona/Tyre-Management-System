@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '@/firebase/firebaseConfig'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '@/firebase/firebaseConfig'
 import { Form, Input, Button, message } from 'antd'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -16,9 +17,44 @@ const LoginForm = () => {
   const onFinish = async (values: any) => {
     setLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password)
-      message.success('Login successful')
-      router.push('/admin')
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        values.email,
+        values.password
+      )
+
+      const uid = userCredential.user.uid
+      const userDoc = await getDoc(doc(db, 'users', uid))
+
+      if (!userDoc.exists()) throw new Error('User profile not found.')
+
+      const role = userDoc.data().role
+      message.success(
+        `Welcome back, ${role}! Redirecting you to your dashboard...`
+      )
+
+      switch (role) {
+        case 'Admin':
+          router.push('/admin')
+          break
+        case 'Director':
+          router.push('/director/')
+          break
+        case 'Site Manager':
+          router.push('/site-manager')
+          break
+        case 'Supervisor':
+          router.push('/supervisor')
+          break
+        case 'Fitter':
+          router.push('/fitter')
+          break
+        default:
+          message.warning('Role not recognized.')
+          break
+      }
+
+      localStorage.setItem('userRole', role)
     } catch (error: any) {
       message.error(error.message)
     } finally {
@@ -36,11 +72,7 @@ const LoginForm = () => {
       >
         <motion.div
           animate={{ y: [0, -8, 0] }}
-          transition={{
-            repeat: Infinity,
-            duration: 2,
-            ease: 'easeInOut'
-          }}
+          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
           className='absolute -top-14 left-1/2 transform -translate-x-1/2'
         >
           <Image
@@ -53,7 +85,7 @@ const LoginForm = () => {
         </motion.div>
 
         <h2 className='text-white text-2xl mb-6 font-bold text-center'>
-          Admin Login
+          Welcome Back
         </h2>
         <Form layout='vertical' onFinish={onFinish}>
           <Form.Item

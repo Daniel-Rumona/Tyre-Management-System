@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Row,
   Col,
@@ -21,37 +21,35 @@ import {
   EditOutlined,
   DeleteOutlined
 } from '@ant-design/icons'
+import { auth, db } from '@/firebase/firebaseConfig'
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  deleteUser,
+  getAuth
+} from 'firebase/auth'
+import { collection, doc, setDoc, getDocs, deleteDoc } from 'firebase/firestore'
 
 const { Search } = Input
 const { Option } = Select
-
-// Dummy data for display
 const roles = ['Fitter', 'Supervisor', 'Site Manager', 'Director', 'Admin']
 
-const initialUsers = [
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john@site.com',
-    role: 'Fitter',
-    site: 'Site A'
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    email: 'jane@admin.com',
-    role: 'Admin',
-    site: 'Head Office'
-  }
-]
-
 const UserManagement = () => {
-  const [users, setUsers] = useState(initialUsers)
+  const [users, setUsers] = useState<any[]>([])
   const [filterRole, setFilterRole] = useState<string | undefined>()
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
   const [editingUser, setEditingUser] = useState<any>(null)
+
+  const fetchUsers = async () => {
+    const snap = await getDocs(collection(db, 'users'))
+    setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const openModal = (user: any = null) => {
     setEditingUser(user)
@@ -59,27 +57,42 @@ const UserManagement = () => {
     setModalOpen(true)
   }
 
-  const handleDelete = (id: number) => {
-    setUsers(prev => prev.filter(u => u.id !== id))
+  const handleDelete = async (id: string) => {
+    await deleteDoc(doc(db, 'users', id))
     message.success('User deleted.')
+    fetchUsers()
   }
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = async (values: any) => {
     if (editingUser) {
-      setUsers(prev =>
-        prev.map(u =>
-          u.id === editingUser.id ? { ...editingUser, ...values } : u
-        )
-      )
+      await setDoc(doc(db, 'users', editingUser.id), {
+        ...editingUser,
+        ...values
+      })
       message.success('User updated.')
     } else {
-      const newUser = { ...values, id: Date.now() }
-      setUsers(prev => [...prev, newUser])
-      message.success('User added.')
+      try {
+        const userCred = await createUserWithEmailAndPassword(
+          auth,
+          values.email,
+          'defaultPassword123'
+        )
+        await updateProfile(userCred.user, { displayName: values.name })
+        await setDoc(doc(db, 'users', userCred.user.uid), {
+          name: values.name,
+          email: values.email,
+          role: values.role,
+          site: values.site
+        })
+        message.success('User created and stored.')
+      } catch (err: any) {
+        message.error(err.message)
+      }
     }
     setModalOpen(false)
     form.resetFields()
     setEditingUser(null)
+    fetchUsers()
   }
 
   const filteredUsers = users.filter(
@@ -91,7 +104,6 @@ const UserManagement = () => {
 
   return (
     <>
-      {/* Metrics */}
       <Row gutter={16} className='mb-4'>
         <Col xs={24} md={6}>
           <Card>
@@ -122,7 +134,6 @@ const UserManagement = () => {
         </Col>
       </Row>
 
-      {/* Search and Filter */}
       <Row gutter={16} className='mb-4'>
         <Col xs={24} md={6}>
           <Select
@@ -157,7 +168,6 @@ const UserManagement = () => {
         </Col>
       </Row>
 
-      {/* Table */}
       <Table
         rowKey='id'
         columns={[
@@ -186,7 +196,6 @@ const UserManagement = () => {
         dataSource={filteredUsers}
       />
 
-      {/* Modal */}
       <Modal
         title={editingUser ? 'Edit User' : 'Add New User'}
         open={modalOpen}

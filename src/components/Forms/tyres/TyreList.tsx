@@ -36,12 +36,25 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import RemoveTyreForm from './RemoveTyreForm'
 import TyreTimelineModal from './TyreTimelineModal'
+import type { StatisticProps } from 'antd'
+import CountUp from 'react-countup'
+
+const formatter: StatisticProps['formatter'] = value => (
+  <CountUp end={value as number} separator=',' />
+)
 
 const { Option } = Select
 const { Search } = Input
 
-const TyreList = () => {
-  const [tyres, setTyres] = useState<any[]>([])
+export type Tyre = { id: string } & Record<string, any>
+
+interface Props {
+  initialTyres: Tyre[]
+}
+
+export default function TyreList ({ initialTyres }: Props) {
+  const [loading, setLoading] = useState(false)
+  const [tyres, setTyres] = useState<Tyre[]>(initialTyres)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [fitModal, setFitModal] = useState(false)
@@ -82,9 +95,15 @@ const TyreList = () => {
   }
 
   const fetchTyres = async () => {
-    const snapshot = await getDocs(collection(db, 'tyres'))
-    const tyreData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
-    setTyres(tyreData)
+    try {
+      setLoading(true)
+      const snap = await getDocs(collection(db, 'tyres'))
+      setTyres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (values: any) => {
@@ -179,11 +198,12 @@ const TyreList = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card>
+            <Card loading={loading}>
               <Statistic
                 title='In Stock'
                 value={counts.inStock}
                 prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                formatter={formatter}
               />
             </Card>
           </motion.div>
@@ -194,11 +214,12 @@ const TyreList = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card>
+            <Card loading={loading}>
               <Statistic
                 title='Fitted'
                 value={counts.fitted}
                 prefix={<ClockCircleOutlined style={{ color: '#1677ff' }} />}
+                formatter={formatter}
               />
             </Card>
           </motion.div>
@@ -209,11 +230,12 @@ const TyreList = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card>
+            <Card loading={loading}>
               <Statistic
                 title='Removed'
                 value={counts.removed}
                 prefix={<StopOutlined style={{ color: '#f5222d' }} />}
+                formatter={formatter}
               />
             </Card>
           </motion.div>
@@ -387,5 +409,3 @@ const TyreList = () => {
     </>
   )
 }
-
-export default TyreList

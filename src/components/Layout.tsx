@@ -20,7 +20,11 @@ import {
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
-  TeamOutlined
+  TeamOutlined,
+  PieChartOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  DollarOutlined
 } from '@ant-design/icons'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -32,12 +36,22 @@ const routeMap: Record<string, string> = {
   '/': 'Home',
   '/login': 'Login',
   '/register': 'Register',
+
+  // Admin
   '/admin': 'Dashboard',
   '/admin/tyres': 'Tyres',
+  '/admin/settings': 'System Settings',
   '/admin/machines': 'Machines',
   '/admin/inspections': 'Inspections',
-  '/admin/reports': 'Reports',
-  '/admin/users': 'Users'
+  '/admin/users': 'Users',
+
+  // Director
+  '/director': 'Director Dashboard',
+  '/director/reports': 'Reports Overview',
+  '/director/reports/supplier': 'Supplier Performance',
+  '/director/reports/spend': 'Spend Analysis',
+  '/director/reports/scrap': 'Scrap Analysis',
+  '/director/reports/failures': 'Failure Trends'
 }
 
 const allRoutesByRole: Record<string, MenuProps['items']> = {
@@ -53,19 +67,19 @@ const allRoutesByRole: Record<string, MenuProps['items']> = {
       label: <Link href='/admin/tyres'>Tyres</Link>
     },
     {
-      key: '/admin/machines',
+      key: '/admin/settings',
       icon: <ToolOutlined />,
+      label: <Link href='/admin/settings'>System Settings</Link>
+    },
+    {
+      key: '/admin/machines',
+      icon: <PieChartOutlined />,
       label: <Link href='/admin/machines'>Machines</Link>
     },
     {
       key: '/admin/inspections',
       icon: <FileSearchOutlined />,
       label: <Link href='/admin/inspections'>Inspections</Link>
-    },
-    {
-      key: '/admin/reports',
-      icon: <SettingOutlined />,
-      label: <Link href='/admin/reports'>Reports</Link>
     },
     {
       key: '/admin/users',
@@ -93,15 +107,67 @@ const allRoutesByRole: Record<string, MenuProps['items']> = {
     },
     {
       key: '/admin/reports',
-      icon: <SettingOutlined />,
+      icon: <BarChartOutlined />,
       label: <Link href='/admin/reports'>Reports</Link>
     }
   ],
   Director: [
     {
-      key: '/admin/reports',
-      icon: <SettingOutlined />,
-      label: <Link href='/admin/reports'>Reports</Link>
+      key: '/director',
+      icon: <DashboardOutlined />,
+      label: <Link href='/director/'>Dashboard</Link>
+    },
+    {
+      key: '/director/reports',
+      icon: <FileSearchOutlined />,
+      label: 'Reports',
+      children: [
+        {
+          key: '/director/reports',
+          label: (
+            <Link href='/director/reports'>
+              <BarChartOutlined style={{ marginRight: 8 }} />
+              Overview
+            </Link>
+          )
+        },
+        {
+          key: '/director/reports/supplier',
+          label: (
+            <Link href='/director/reports/supplier'>
+              <TeamOutlined style={{ marginRight: 8 }} />
+              Supplier Performance
+            </Link>
+          )
+        },
+        {
+          key: '/director/reports/spend',
+          label: (
+            <Link href='/director/reports/spend'>
+              <DollarOutlined style={{ marginRight: 8 }} />
+              Spend Analysis
+            </Link>
+          )
+        },
+        {
+          key: '/director/reports/scrap',
+          label: (
+            <Link href='/director/reports/scrap'>
+              <PieChartOutlined style={{ marginRight: 8 }} />
+              Scrap Analysis
+            </Link>
+          )
+        },
+        {
+          key: '/director/reports/failures',
+          label: (
+            <Link href='/director/reports/failures'>
+              <FileSearchOutlined style={{ marginRight: 8 }} />
+              Failure Trends
+            </Link>
+          )
+        }
+      ]
     }
   ]
 }
@@ -109,12 +175,16 @@ const allRoutesByRole: Record<string, MenuProps['items']> = {
 const SystemLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [role, setRole] = useState<string>('Admin') // Replace with real role from auth
+  const [role, setRole] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('userRole') || 'Admin'
+    }
+    return 'Admin'
+  })
   const pathname = usePathname()
   const router = useRouter()
 
   const handleLogout = () => {
-    // TODO: Firebase logout
     router.push('/login')
   }
 
@@ -127,7 +197,7 @@ const SystemLayout = ({ children }: { children: React.ReactNode }) => {
     })
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh' }}>
       <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
         <div className='text-white text-center py-4 text-lg font-bold'>TMS</div>
         <Menu
@@ -138,7 +208,7 @@ const SystemLayout = ({ children }: { children: React.ReactNode }) => {
           items={allRoutesByRole[role] || []}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
         <Header className='bg-white flex items-center justify-between px-4 shadow-sm'>
           <Breadcrumb items={breadcrumbs} />
           <Dropdown
@@ -166,7 +236,12 @@ const SystemLayout = ({ children }: { children: React.ReactNode }) => {
             />
           </Dropdown>
         </Header>
-        <Content className='p-6 bg-gray-50'>{children}</Content>
+        <Content
+          className='p-6 bg-gray-50'
+          style={{ flex: 1, overflowY: 'auto' }}
+        >
+          {children}
+        </Content>
       </Layout>
 
       <Drawer
