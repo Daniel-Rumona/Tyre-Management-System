@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card, Row, Col, Statistic } from 'antd'
+import { Card, Row, Col, Statistic, Button, message, Modal } from 'antd'
 import {
   DatabaseOutlined,
   ToolOutlined,
   FileSearchOutlined,
-  WarningOutlined
+  WarningOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import type { StatisticProps } from 'antd'
 import CountUp from 'react-countup'
@@ -14,6 +15,7 @@ import Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
 import { collection, getDocs, Timestamp } from 'firebase/firestore'
 import { db } from '@/firebase/firebaseConfig'
+import { seedAllUsers } from '@/utils/seedUsers'
 
 const formatter: StatisticProps['formatter'] = value => (
   <CountUp end={value as number} separator=',' />
@@ -26,16 +28,21 @@ interface Tyre {
   createdAt: Timestamp
   removeDate?: string
 }
+
 interface Machine {}
+
 interface Inspection {
   date: string
 }
 
-export default function AdminDashboard () {
+export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [tyres, setTyres] = useState<Tyre[]>([])
   const [machines, setMachines] = useState<Machine[]>([])
   const [inspections, setInspections] = useState<Inspection[]>([])
+  const [seeding, setSeeding] = useState(false)
+  const [seedResults, setSeedResults] = useState<any[]>([])
+  const [showSeedResults, setShowSeedResults] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,6 +58,31 @@ export default function AdminDashboard () {
     }
     fetchData()
   }, [])
+
+  const handleSeedUsers = async () => {
+    try {
+      setSeeding(true)
+      const results = await seedAllUsers()
+      setSeedResults(results)
+      
+      // Count successful and failed operations
+      const successes = results.filter(r => r.success).length
+      const failures = results.length - successes
+      
+      if (failures === 0) {
+        message.success(`Successfully seeded ${successes} users`)
+      } else {
+        message.warning(`Seeded ${successes} users, ${failures} failed`)
+      }
+      
+      setShowSeedResults(true)
+    } catch (error) {
+      console.error('Error seeding users:', error)
+      message.error('Failed to seed users')
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   // Metrics
   const totalTyres = tyres.length
@@ -173,8 +205,25 @@ export default function AdminDashboard () {
         ))}
       </Row>
 
+      {/* User Seeding */}
+      <Row gutter={[16, 16]} className='mt-6 mb-4'>
+        <Col xs={24}>
+          <Button 
+            type="primary"
+            onClick={handleSeedUsers}
+            loading={seeding}
+            icon={<UserOutlined />}
+          >
+            Seed Required Users
+          </Button>
+          <span className="ml-2 text-gray-500">
+            Creates standard role users with email@company.com and Password123!
+          </span>
+        </Col>
+      </Row>
+
       {/* Charts */}
-      <Row gutter={[16, 16]} className='mt-6'>
+      <Row gutter={[16, 16]} className='mb-6'>
         <Col xs={24} md={12}>
           <Card loading={loading}>
             <HighchartsReact
@@ -192,6 +241,34 @@ export default function AdminDashboard () {
           </Card>
         </Col>
       </Row>
+
+      <Modal 
+        title="User Seeding Results"
+        open={showSeedResults}
+        onCancel={() => setShowSeedResults(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowSeedResults(false)}>
+            Close
+          </Button>
+        ]}
+      >
+        <div>
+          {seedResults.map((result, index) => (
+            <div key={index} className="mb-2 p-2 border-b">
+              <div><strong>Email:</strong> {result.email}</div>
+              <div><strong>Role:</strong> {result.role}</div>
+              <div>
+                <strong>Status:</strong> 
+                <span className={result.success ? 'text-green-600' : 'text-red-600'}>
+                  {result.success ? 'Success' : 'Failed'}
+                </span>
+              </div>
+              {result.message && <div><strong>Message:</strong> {result.message}</div>}
+              {result.error && <div><strong>Error:</strong> {result.error}</div>}
+            </div>
+          ))}
+        </div>
+      </Modal>
     </>
   )
 }

@@ -12,7 +12,8 @@ import {
   Table,
   Modal,
   Form,
-  message
+  message,
+  Tag
 } from 'antd'
 import {
   UserAddOutlined,
@@ -29,10 +30,27 @@ import {
   getAuth
 } from 'firebase/auth'
 import { collection, doc, setDoc, getDocs, deleteDoc } from 'firebase/firestore'
+import { ROLES, RoleType } from '@/utils/userSetup'
 
 const { Search } = Input
 const { Option } = Select
-const roles = ['Fitter', 'Supervisor', 'Site Manager', 'Director', 'Admin']
+
+// Default password for new users
+const DEFAULT_PASSWORD = 'Password123!'
+
+// Role names for display
+const roleOptions = Object.values(ROLES)
+
+const getRoleColor = (role: string) => {
+  switch(role) {
+    case ROLES.FITTER: return 'blue'
+    case ROLES.SUPERVISOR: return 'green'
+    case ROLES.SITE_MANAGER: return 'purple'
+    case ROLES.DIRECTOR: return 'orange'
+    case ROLES.ADMIN: return 'red'
+    default: return 'default'
+  }
+}
 
 const UserManagement = () => {
   const [users, setUsers] = useState<any[]>([])
@@ -53,7 +71,7 @@ const UserManagement = () => {
 
   const openModal = (user: any = null) => {
     setEditingUser(user)
-    form.setFieldsValue(user || { role: 'Fitter' })
+    form.setFieldsValue(user || { role: ROLES.FITTER, email: '@company.com' })
     setModalOpen(true)
   }
 
@@ -64,23 +82,27 @@ const UserManagement = () => {
   }
 
   const handleSubmit = async (values: any) => {
+    // Ensure email has domain if not provided
+    const email = values.email.includes('@') ? values.email : `${values.email}@company.com`
+    
     if (editingUser) {
       await setDoc(doc(db, 'users', editingUser.id), {
         ...editingUser,
-        ...values
+        ...values,
+        email
       })
       message.success('User updated.')
     } else {
       try {
         const userCred = await createUserWithEmailAndPassword(
           auth,
-          values.email,
-          'defaultPassword123'
+          email,
+          DEFAULT_PASSWORD
         )
         await updateProfile(userCred.user, { displayName: values.name })
         await setDoc(doc(db, 'users', userCred.user.uid), {
           name: values.name,
-          email: values.email,
+          email,
           role: values.role,
           site: values.site
         })
@@ -98,8 +120,8 @@ const UserManagement = () => {
   const filteredUsers = users.filter(
     u =>
       (!filterRole || u.role === filterRole) &&
-      (u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase()))
+      (u.name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase()))
   )
 
   return (
@@ -117,8 +139,8 @@ const UserManagement = () => {
         <Col xs={24} md={6}>
           <Card>
             <Statistic
-              title='Admins'
-              value={users.filter(u => u.role === 'Admin').length}
+              title='Tyre Fitters'
+              value={users.filter(u => u.role === ROLES.FITTER).length}
               prefix={<UserOutlined />}
             />
           </Card>
@@ -126,8 +148,17 @@ const UserManagement = () => {
         <Col xs={24} md={6}>
           <Card>
             <Statistic
-              title='Fitters'
-              value={users.filter(u => u.role === 'Fitter').length}
+              title='Supervisors'
+              value={users.filter(u => u.role === ROLES.SUPERVISOR).length}
+              prefix={<UserAddOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} md={6}>
+          <Card>
+            <Statistic
+              title='Site Managers'
+              value={users.filter(u => u.role === ROLES.SITE_MANAGER).length}
               prefix={<UserAddOutlined />}
             />
           </Card>
@@ -143,7 +174,7 @@ const UserManagement = () => {
             onChange={val => setFilterRole(val)}
             className='w-full'
           >
-            {roles.map(role => (
+            {roleOptions.map(role => (
               <Option key={role} value={role}>
                 {role}
               </Option>
@@ -173,7 +204,11 @@ const UserManagement = () => {
         columns={[
           { title: 'Name', dataIndex: 'name' },
           { title: 'Email', dataIndex: 'email' },
-          { title: 'Role', dataIndex: 'role' },
+          { 
+            title: 'Role', 
+            dataIndex: 'role',
+            render: (role) => <Tag color={getRoleColor(role)}>{role}</Tag>
+          },
           { title: 'Site', dataIndex: 'site' },
           {
             title: 'Actions',
@@ -210,13 +245,14 @@ const UserManagement = () => {
           <Form.Item
             name='email'
             label='Email'
-            rules={[{ required: true, type: 'email' }]}
+            rules={[{ required: true }]}
+            help="Will append @company.com if not provided"
           >
             <Input />
           </Form.Item>
           <Form.Item name='role' label='Role' rules={[{ required: true }]}>
             <Select>
-              {roles.map(r => (
+              {roleOptions.map(r => (
                 <Option key={r} value={r}>
                   {r}
                 </Option>
@@ -230,6 +266,11 @@ const UserManagement = () => {
           >
             <Input />
           </Form.Item>
+          {!editingUser && (
+            <div className="mb-4 p-2 bg-blue-50 rounded">
+              <p>Default password will be: <strong>{DEFAULT_PASSWORD}</strong></p>
+            </div>
+          )}
         </Form>
       </Modal>
     </>

@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import SystemLayout from '@/components/Layout'
+import SeedInitializer from './SeedInitializer'
 
 export default function ClientLayout ({
   children
@@ -14,5 +15,11 @@ export default function ClientLayout ({
     pathname.startsWith('/login') ||
     pathname.startsWith('/register')
 
-  return isPublic ? <>{children}</> : <SystemLayout>{children}</SystemLayout>
+  return (
+    <>
+      {/* This component doesn't render anything visible but seeds users on first load */}
+      <SeedInitializer />
+      {isPublic ? <>{children}</> : <SystemLayout>{children}</SystemLayout>}
+    </>
+  )
 }
