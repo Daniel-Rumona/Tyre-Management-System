@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { ConfigProvider } from 'antd'
+import { ConfigProvider, App as AntdApp } from 'antd'
 import ClientLayout from '@/components/ClientLayout'
-import { App as AntdApp } from 'antd'
+import { UserProvider } from '@/contexts/UserContext'
+import { InspectionsProvider } from '@/contexts/InspectionsContext'
+import { FitmentLogsProvider } from '@/contexts/FitmentLogsContext'
+import { TyreAnalyticsProvider } from '@/contexts/TyreAnalyticsContext'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -20,13 +23,13 @@ export const metadata: Metadata = {
   description: 'Made with love by DR | Quantilytix'
 }
 
-export default function RootLayout ({
+export default function RootLayout({
   children
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang='en'>
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -42,7 +45,15 @@ export default function RootLayout ({
           }}
         >
           <AntdApp>
-            <ClientLayout>{children}</ClientLayout>
+            <UserProvider>
+              <InspectionsProvider>
+                <FitmentLogsProvider>
+                  <TyreAnalyticsProvider>
+                    <ClientLayout>{children}</ClientLayout>
+                  </TyreAnalyticsProvider>
+                </FitmentLogsProvider>
+              </InspectionsProvider>
+            </UserProvider>
           </AntdApp>
         </ConfigProvider>
       </body>

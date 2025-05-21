@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/firebase/firebaseConfig'
@@ -9,54 +9,47 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { LoginOutlined } from '@ant-design/icons'
+import { useUser, getRoleHomePath } from '@/contexts/UserContext'
+import { RoleType } from '@/utils/userSetup'
 
 const LoginForm = () => {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { user, userData } = useUser()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && userData) {
+      const rolePath = getRoleHomePath(userData.role)
+      router.push(rolePath)
+    }
+  }, [user, userData, router])
 
   const onFinish = async (values: any) => {
     setLoading(true)
     try {
+      // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(
-        auth,
-        values.email,
+        auth, 
+        values.email, 
         values.password
       )
-
-      const uid = userCredential.user.uid
-      const userDoc = await getDoc(doc(db, 'users', uid))
-
-      if (!userDoc.exists()) throw new Error('User profile not found.')
-
-      const role = userDoc.data().role
-      message.success(
-        `Welcome back, ${role}! Redirecting you to your dashboard...`
-      )
-
-      switch (role) {
-        case 'Admin':
-          router.push('/admin')
-          break
-        case 'Director':
-          router.push('/director/')
-          break
-        case 'Site Manager':
-          router.push('/site-manager')
-          break
-        case 'Supervisor':
-          router.push('/supervisor')
-          break
-        case 'Fitter':
-          router.push('/fitter')
-          break
-        default:
-          message.warning('Role not recognized.')
-          break
+      
+      // Get user role from Firestore
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid))
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        const rolePath = getRoleHomePath(userData.role as RoleType)
+        
+        message.success('Login successful')
+        router.push(rolePath)
+      } else {
+        message.warning('User profile not found')
+        router.push('/admin') // Default fallback
       }
-
-      localStorage.setItem('userRole', role)
     } catch (error: any) {
-      message.error(error.message)
+      message.error(error.message || 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -85,7 +78,7 @@ const LoginForm = () => {
         </motion.div>
 
         <h2 className='text-white text-2xl mb-6 font-bold text-center'>
-          Welcome Back
+          Tyre Management System
         </h2>
         <Form layout='vertical' onFinish={onFinish}>
           <Form.Item
@@ -115,6 +108,12 @@ const LoginForm = () => {
               </Button>
             </motion.div>
           </Form.Item>
+          <div className="text-gray-400 text-xs mt-4">
+            <p>Demo Accounts:</p>
+            <p>fitter@company.com / Password123!</p>
+            <p>supervisor@company.com / Password123!</p>
+            <p>sitemanager@company.com / Password123!</p>
+          </div>
         </Form>
       </motion.div>
       <Image

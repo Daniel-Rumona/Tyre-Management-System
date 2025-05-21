@@ -1,79 +1,28 @@
-import React, { Suspense, useEffect, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Preload, useGLTF } from '@react-three/drei'
+'use client'
 
-import CanvasLoader from '../Loader'
+import React from 'react'
+import { motion } from 'framer-motion'
+import Image from 'next/image'
 
-const Tyres = ({ isMobile }) => {
-  const computer = useGLTF('/model/scene.gltf') // Use absolute path for public folder assets
-
-  // Rotation state
-  const [rotation, setRotation] = useState([0, 0, 0])
-
-  // Use `useFrame` to rotate the model in place
-  useFrame(() => {
-    setRotation(prev => [prev[0], prev[1] + 0.01, prev[2]]) // Increment Y-axis rotation
-  })
-
-  return (
-    <>
-      <hemisphereLight intensity={0.15} groundColor='black' />
-      <spotLight
-        position={[-20, 50, 10]}
-        angle={0.12}
-        penumbra={1}
-        intensity={1}
-        castShadow
-        shadow-mapSize={1024}
-      />
-      <pointLight intensity={1} />
-      <mesh
-        position={[0, isMobile ? -3.5 : -2.5, 0]} // Adjust Y-axis to move the model lower
-        rotation={rotation} // Keep the rotation logic
-      >
-        <primitive object={computer.scene} scale={isMobile ? 0.7 : 1.2} />
-      </mesh>
-    </>
-  )
-}
-
+// Simplified placeholder component that doesn't use @react-three/fiber
 const TyreCanvas = () => {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 500px)')
-    setIsMobile(mediaQuery.matches)
-
-    const handleMediaQueryChange = event => {
-      setIsMobile(event.matches)
-    }
-
-    mediaQuery.addEventListener('change', handleMediaQueryChange)
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleMediaQueryChange)
-    }
-  }, [])
-
   return (
-    <Canvas
-      frameloop='demand'
-      shadow={false}
-      dpr={[1, 2]}
-      camera={{ position: [20, 3, 5], fov: 25 }}
-      gl={{ preserveDrawingBuffer: true }}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8 }}
+      className="flex justify-center items-center p-4"
     >
-      <Suspense fallback={<CanvasLoader />}>
-        <OrbitControls
-          enableZoom={false}
-          enableRotate={false} // Prevent user rotation
-          maxPolarAngle={Math.PI / 2}
-          minPolarAngle={Math.PI / 2}
-        />
-        <Tyres isMobile={isMobile} />
-      </Suspense>
-      <Preload all />
-    </Canvas>
+      <div className="relative w-64 h-64 md:w-96 md:h-96 bg-gray-800 rounded-full flex items-center justify-center">
+        <div className="absolute inset-4 rounded-full bg-gray-700 flex items-center justify-center">
+          <div className="w-3/4 h-3/4 rounded-full bg-gray-800 flex items-center justify-center text-center p-4">
+            <span className="text-xl font-bold text-gray-300">
+              Tyre Management System
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }
 

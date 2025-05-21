@@ -10,7 +10,8 @@ import {
   Drawer,
   Form,
   Input,
-  Button
+  Button,
+  Spin
 } from 'antd'
 import {
   AppstoreOutlined,
@@ -29,6 +30,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { MenuProps } from 'antd'
+import { useUser, getRoleBasePath } from '@/contexts/UserContext'
 
 const { Header, Sider, Content } = Layout
 
@@ -43,19 +45,99 @@ const routeMap: Record<string, string> = {
   '/admin/settings': 'System Settings',
   '/admin/machines': 'Machines',
   '/admin/inspections': 'Inspections',
+  '/admin/reports': 'Reports',
   '/admin/users': 'Users',
-
+  '/admin/setup-users': 'User Setup',
+  
   // Director
   '/director': 'Director Dashboard',
   '/director/reports': 'Reports Overview',
   '/director/reports/supplier': 'Supplier Performance',
   '/director/reports/spend': 'Spend Analysis',
   '/director/reports/scrap': 'Scrap Analysis',
-  '/director/reports/failures': 'Failure Trends'
+  '/director/reports/failures': 'Failure Trends',
+  
+  // Fitter
+  '/fitter': 'Dashboard',
+  '/fitter/tyres': 'Tyres',
+  '/fitter/inspections': 'Inspections',
+  '/fitter/fitment-logs': 'Fitment Logs',
+  
+  // Supervisor
+  '/supervisor': 'Dashboard',
+  '/supervisor/inspections': 'Inspections',
+  '/supervisor/reports': 'Reports',
+  
+  // Site Manager
+  '/sitemanager': 'Dashboard',
+  '/sitemanager/tyres': 'Tyres',
+  '/sitemanager/inspections': 'Inspections',
+  '/sitemanager/reports': 'Reports'
 }
 
 const allRoutesByRole: Record<string, MenuProps['items']> = {
-  Admin: [
+  'Tyre Fitter': [
+    {
+      key: '/fitter',
+      icon: <DashboardOutlined />,
+      label: <Link href='/fitter'>Dashboard</Link>
+    },
+    {
+      key: '/fitter/tyres',
+      icon: <AppstoreOutlined />,
+      label: <Link href='/fitter/tyres'>Tyres</Link>
+    },
+    {
+      key: '/fitter/inspections',
+      icon: <FileSearchOutlined />,
+      label: <Link href='/fitter/inspections'>Inspections</Link>
+    },
+    {
+      key: '/fitter/fitment-logs',
+      icon: <ToolOutlined />,
+      label: <Link href='/fitter/fitment-logs'>Fitment Logs</Link>
+    }
+  ],
+  'Supervisor': [
+    {
+      key: '/supervisor',
+      icon: <DashboardOutlined />,
+      label: <Link href='/supervisor'>Dashboard</Link>
+    },
+    {
+      key: '/supervisor/inspections',
+      icon: <FileSearchOutlined />,
+      label: <Link href='/supervisor/inspections'>Inspections</Link>
+    },
+    {
+      key: '/supervisor/reports',
+      icon: <SettingOutlined />,
+      label: <Link href='/supervisor/reports'>Reports</Link>
+    }
+  ],
+  'Site Manager': [
+    {
+      key: '/sitemanager',
+      icon: <DashboardOutlined />,
+      label: <Link href='/sitemanager'>Dashboard</Link>
+    },
+    {
+      key: '/sitemanager/tyres',
+      icon: <AppstoreOutlined />,
+      label: <Link href='/sitemanager/tyres'>Tyres</Link>
+    },
+    {
+      key: '/sitemanager/inspections',
+      icon: <FileSearchOutlined />,
+      label: <Link href='/sitemanager/inspections'>Inspections</Link>
+    },
+    {
+      key: '/sitemanager/reports',
+      icon: <SettingOutlined />,
+      label: <Link href='/sitemanager/reports'>Reports</Link>
+    }
+  ],
+  'Admin': [
     {
       key: '/admin',
       icon: <DashboardOutlined />,
@@ -85,25 +167,11 @@ const allRoutesByRole: Record<string, MenuProps['items']> = {
       key: '/admin/users',
       icon: <TeamOutlined />,
       label: <Link href='/admin/users'>Users</Link>
-    }
-  ],
-  Fitter: [
-    {
-      key: '/admin/tyres',
-      icon: <AppstoreOutlined />,
-      label: <Link href='/admin/tyres'>Tyres</Link>
     },
     {
-      key: '/admin/inspections',
-      icon: <FileSearchOutlined />,
-      label: <Link href='/admin/inspections'>Inspections</Link>
-    }
-  ],
-  Supervisor: [
-    {
-      key: '/admin/inspections',
-      icon: <FileSearchOutlined />,
-      label: <Link href='/admin/inspections'>Inspections</Link>
+      key: '/admin/setup-users',
+      icon: <UserOutlined />,
+      label: <Link href='/admin/setup-users'>User Setup</Link>
     },
     {
       key: '/admin/reports',
@@ -111,7 +179,7 @@ const allRoutesByRole: Record<string, MenuProps['items']> = {
       label: <Link href='/admin/reports'>Reports</Link>
     }
   ],
-  Director: [
+  'Director': [
     {
       key: '/director',
       icon: <DashboardOutlined />,
@@ -175,17 +243,23 @@ const allRoutesByRole: Record<string, MenuProps['items']> = {
 const SystemLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [role, setRole] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('userRole') || 'Admin'
-    }
-    return 'Admin'
-  })
   const pathname = usePathname()
   const router = useRouter()
+  const { userData, loading, logout } = useUser()
 
-  const handleLogout = () => {
+  // No role assigned yet
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  // No user data, redirect to login
+  if (!userData) {
     router.push('/login')
+    return null
   }
 
   const breadcrumbs = pathname
@@ -205,12 +279,19 @@ const SystemLayout = ({ children }: { children: React.ReactNode }) => {
           mode='inline'
           defaultSelectedKeys={[pathname]}
           selectedKeys={[pathname]}
-          items={allRoutesByRole[role] || []}
+          items={allRoutesByRole[userData.role] || []}
         />
       </Sider>
       <Layout style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
         <Header className='bg-white flex items-center justify-between px-4 shadow-sm'>
-          <Breadcrumb items={breadcrumbs} />
+          <div className="flex items-center">
+            <Breadcrumb items={breadcrumbs} />
+            {userData && (
+              <span className="ml-4 text-sm bg-blue-100 px-2 py-1 rounded">
+                {userData.role}
+              </span>
+            )}
+          </div>
           <Dropdown
             menu={{
               items: [
@@ -224,16 +305,21 @@ const SystemLayout = ({ children }: { children: React.ReactNode }) => {
                   key: 'logout',
                   icon: <LogoutOutlined />,
                   label: 'Logout',
-                  onClick: handleLogout
+                  onClick: logout
                 }
               ]
             }}
             trigger={['click']}
           >
-            <Avatar
-              style={{ backgroundColor: '#1677ff', cursor: 'pointer' }}
-              icon={<UserOutlined />}
-            />
+            <div className="flex items-center cursor-pointer">
+              <span className="mr-2 hidden md:inline text-black">
+                {userData?.name || userData?.email}
+              </span>
+              <Avatar
+                style={{ backgroundColor: '#1677ff' }}
+                icon={<UserOutlined />}
+              />
+            </div>
           </Dropdown>
         </Header>
         <Content
@@ -252,15 +338,16 @@ const SystemLayout = ({ children }: { children: React.ReactNode }) => {
       >
         <Form layout='vertical'>
           <Form.Item label='Email'>
-            <Input type='email' placeholder='user@example.com' />
+            <Input type='email' placeholder={userData?.email || 'user@example.com'} disabled />
           </Form.Item>
-          <Form.Item label='Password'>
-            <Input.Password placeholder='New password' />
+          <Form.Item label='Name'>
+            <Input placeholder={userData?.name || 'Your Name'} disabled />
           </Form.Item>
-          <Form.Item>
-            <Button type='primary' block>
-              Update
-            </Button>
+          <Form.Item label='Role'>
+            <Input placeholder={userData?.role} disabled />
+          </Form.Item>
+          <Form.Item label='Site'>
+            <Input placeholder={userData?.site} disabled />
           </Form.Item>
         </Form>
       </Drawer>

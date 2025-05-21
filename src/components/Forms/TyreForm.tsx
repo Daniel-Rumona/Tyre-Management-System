@@ -58,8 +58,8 @@ const TyreForm = () => {
         <Input />
       </Form.Item>
 
-      <Form.Item name='cost' label='Cost' rules={[{ required: true }]}>
-        <InputNumber min={0} style={{ width: '100%' }} prefix='$' />
+      <Form.Item label="Cost" name="cost" rules={[{ required: true, message: 'Please enter cost' }]}>
+        <InputNumber min={0} style={{ width: '100%' }} prefix='R' />
       </Form.Item>
 
       <Form.Item>
